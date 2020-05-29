@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>惨兮兮的刘大诚儿</title>
+    <link rel="stylesheet" type="text/css" href="/js/ol/ol.css">
+    <script type="text/javascript" src="/js/ol/ol.js"></script>
+    <style>
+        html,body{
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        #map{
+            height:100%;
+            width: 100%;
+        }
+        #wrapper{
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            background: rgb(250, 241, 241);
+            z-index: 10;
+            text-align: left;
+        }
+        #featureInfo{
+            background: white;
+            width: 100%;
+        }
+        #searchBar{
+            position: absolute;
+            right: 5px;
+            top: 5px;
+            z-index: 12;
+            background: white;
+            width: 500px;
+            box-shadow:1px 2px 1px rgba(0,0,0,.15);
+        }
+        #searchBox{
+            border: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-radius: 2px 0 0 2px;
+            padding: 9px 0;
+            box-sizing: border-box;
+            outline: 0;
+            width: 462px;
+            height: 38px;
+            font-size: 16px;
+        }
+        img{
+            padding: 5px;
+            display: block;
+            margin: auto;
+            float: right;
+            width: 28px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="map">
+        <div id="wrapper">
+            <div id="featureInfo">
+            </div>
+        </div>
+        <label id="searchBar">
+            <input id="searchBox" type="text" name="query" autocomplete="off"
+                   onkeypress="sendQuery(event)" placeholder="远方除了遥远一无所有......">
+            <img src="img/search.png" onclick="sendQuery(event)">
+        </label>
+    </div>
+
+    <script type="text/javascript">
+        let map = new ol.Map({
+            target: "map",
+            layers: [
+                new ol.layer.Tile({                 // 瓦片图层
+                    source: new ol.source.OSM()     // OpenStreetMap数据源
+                }),
+                new ol.layer.Tile({
+                    source: new ol.source.TileWMS({
+                        extent:[80.7240219116211,6.08244466781616,135.314254760742,53.7941207885742],
+                        url:'http://localhost:8080/geoserver/wms',
+                        params: {'LAYERS': 'china','FORMAT':'image/png', 'TILED': true},
+                        serverType: 'geoserver',
+                        transition: 0,
+                    })
+                }),
+                new ol.layer.Vector({
+                    source: new ol.source.Vector({
+                        url:'json/GeoJSON_HB.json',
+                        format:new ol.format.GeoJSON()
+                        // features: (new ol.Format.GeoJSON()).readFeatures(require('../json/GeoJSON_HB.json'))
+                    }),
+                    style: new ol.style.Style({
+                        stroke: new ol.style.Stroke({
+                            color: 'blue',
+                            lineDash: [4],
+                            width: 2
+                        }),
+                        fill: new ol.style.Fill({
+                            color: 'rgba(0, 0, 255, 0.3)'
+                        })
+                    }),
+                }),
+            ],
+            view: new ol.View({
+                projection:'EPSG:3857',
+                center: ol.proj.fromLonLat([108.0191383, 29.9382827]),
+                // center: [108.0191383, 29.9382827],
+                zoom: 4
+            })
+        });
+        let searchLayer = new ol.layer.Vector({
+            source: new ol.source.Vector(),
+            style: new ol.style.Style({
+                image: new ol.style.Icon({
+                    src: 'img/plane.jpg',
+                    scale: 0.1
+                })
+            })
+        });
+        map.addLayer(searchLayer);
+
+        function sendQuery(event){
+            console.log(event.type);
+            if (event.keyCode === 13 || event.type === "click") {
+                let xmlHttpRequest = null;
+                let url = "/search";
+                xmlHttpRequest = new XMLHttpRequest();
+                xmlHttpRequest.open("GET", "/search?query="+document.getElementById("searchBox").value, true);
+                xmlHttpRequest.send();
+                xmlHttpRequest.onreadystatechange = function(){
+                    if(xmlHttpRequest.readyState === 4 && xmlHttpRequest.status === 200){
+                        try {
+                            searchLayer.getSource().clear();
+                            searchLayer.getSource().addFeatures((new ol.format.GeoJSON()).readFeatures(xmlHttpRequest.responseText));
+                        }catch (e) {
+
+                        }
+                    }
+                }
+            }
+        }
+
+
+
+        // this.map.on('singleclick', function(evt) {
+        //   var view = this.getView()
+        //   var layer = this.getLayers().array_[1]
+        //   var source = layer.getSource()
+        //   var url = source.getFeatureInfoUrl(
+        //     evt.coordinate, view.getResolution(), view.getProjection(),
+        //     {'INFO_FORMAT': 'text/html'})
+        //   if(url){
+        //     document.getElementById('featureInfo').innerHTML='<iframe seamless background="white" width="100%" src="'+url+'"></iframe>'
+        //     console.log(document.getElementById('featureInfo').innerHTML)
+        //   }
+        // })
+    </script>
+</body>
+</html>
